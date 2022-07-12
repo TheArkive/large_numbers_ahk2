@@ -1,4 +1,6 @@
-
+; by TheArkive
+; forum link: https://www.autohotkey.com/boards/viewtopic.php?f=83&t=106325
+; ==========================================================================
 
 class math {
     x86 := (2 ** 31) - 1 ; 2,147,483,647 (0's = 9)                  signed
