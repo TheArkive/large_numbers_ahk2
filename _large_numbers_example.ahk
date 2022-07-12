@@ -141,4 +141,9 @@ Msgbox disp("Example 8`nLarge Decimal Multiplication",_calc,ahk)
 
 
 
-
+m.dec := 100
+a := 355                                            ; example 9 (calculate π)
+b := 113
+_calc := calc(a,"/",b), _t := A_TickCount
+ahk := m.Div(a,b)
+Msgbox disp("Example 9`nCompute π (approx) to 100 decimal places`n`n",_calc,ahk)
