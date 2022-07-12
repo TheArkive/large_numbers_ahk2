@@ -1,6 +1,8 @@
 # large_numbers_ahk2
 Large Number Library class
 
+Naturally input and output are strings.  Performance seems good so far.
+
 Features:
 
 * Addition
