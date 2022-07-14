@@ -19,6 +19,17 @@ class math {
         this.dec := dec ; decimal length
     }
     
+    Validate(x) {
+        dec := "\-?\d+(\.\d+)?"
+        hex := "0x[\da-f]+"
+        ; sci := "" ; scientific notation - not yet supported
+        
+        result := (RegExMatch(x,  "^" dec "$")
+                || RegExMatch(x,"i)^" hex "$"))
+        
+        return result
+    }
+    
     ; =================================================================
     ; base conversion
     ; =================================================================
@@ -26,7 +37,7 @@ class math {
     DecToHex(x,bit_width:=0) {
         If (bit_width) && !(Len := 0) {
             Len := Ceil(bit_width/4) ; length (bit_width) of number for hex
-            x := ((max_num := this.Exp(2,bit_width)) < x) ? max_num : x ; truncate number based on bit_width (if specified)
+            x := (this.L(max_num := this.Exp(2,bit_width),x)) ? max_num : x ; truncate number based on bit_width (if specified)
         }
         
         Static v := "0123456789ABCDEF"
@@ -62,18 +73,24 @@ class math {
         return this.Add(arr*)
     }
     
-    DecToBin(x) {
+    DecToBin(x,bit_width:=0) {
+        If (bit_width)
+            x := (this.L(max_num := this.Exp(2,bit_width),x)) ? max_num : x ; truncate number based on bit_width (if specified)
+        
         str := "", t := this.DivIM(x,2)
         While (t.i) {
             str := t.r str
-            t := this.DivIM(t.i,2)
+            If this.Compare(t.i,2)
+                t := this.DivIM(t.i,2)
+            Else Break
         }
-        str := t.r str
+        str := t.i str
+        (bit_width) ? (str := this._sr("0",bit_width-StrLen(str)) str) : ""
         return str
     }
     
     BinToDec(x) {
-        arr := []
+        arr := [], x := this._drop_lead(x)
         Loop (L:=StrLen(x)) {
             fac := this.Exp(2,A_Index-1)
             c := SubStr(x,L-(A_Index-1),1)
@@ -123,7 +140,14 @@ class math {
     ; multiplication / division
     ; =================================================================
     
-    Div(x,y) => this._div(x,y)
+    Div(p*) {
+        If p.Length < 2
+            throw Error("obj.Div() requires a minimum of 2 parameters.",-1)
+        res := this._div(p.RemoveAt(1),p.RemoveAt(1)) ; first calc
+        While p.Length
+            res := this._div(res,p.RemoveAt(1)) ; remaining calcs
+        return res
+    }
     
     DivI(x,y) => ((r:=this._div(x,y,&remain))="") ? "0" : r
     
@@ -138,10 +162,16 @@ class math {
         Else If (e=1)
             return x
         
-        arr := []
+        e := this._abs(e,&eN), arr := []
         Loop e
             arr.Push(x)
-        return this.Mult(arr*)
+        
+        If this.Ge(e,2) && !eN { ; positive exponents where (e >= 2)
+            return this.Mult(arr*)
+        } Else If eN { ; exponent is negative
+            arr.InsertAt(1,"1")
+            return this.Div(arr*)
+        } Else throw Error("Unhandled exeption, obj.Exp()",-1) ; this should never happen
     }
     
     Mod(x,y) {
@@ -153,12 +183,8 @@ class math {
         If p.Length < 2
             throw Error("obj.Mult() requires a minimum of 2 parameters.",-1)
         res := this._mult(p.RemoveAt(1),p.RemoveAt(1)) ; first calc
-        While p.Length {
+        While p.Length
             res := this._mult(res,p.RemoveAt(1)) ; remaining calcs
-            
-            ; dbg("==========================================================")
-            ; dbg("Mult() idx: " A_Index " / res: " res)
-        }
         return res
     }
     
@@ -200,11 +226,11 @@ class math {
     
     G(x,y)  => ((r:=this.Compare(x,y))=-1) ? false : r ; greater than
     
-    Ge(x,y) => ((r:=this.Compare(x,y))=1 || r=-1) ? true : false
+    Ge(x,y) => ((r:=this.Compare(x,y))=1 || r=-1) ? true : false ; greater than or equal to
     
     L(x,y)  => ((r:=this.Compare(x,y))=-1) ? false : !r ; less than
     
-    Le(x,y) => ((r:=this.Compare(x,y))=0 || r=-1) ? true : false
+    Le(x,y) => ((r:=this.Compare(x,y))=0 || r=-1) ? true : false ; less than or equal to
     
     ; =================================================================
     ; other
