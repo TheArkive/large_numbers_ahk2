@@ -23,3 +23,5 @@ Features:
 * Binary to Dec conversion
 
 More to come...
+
+Have ideas / requests?  Open an issue, and I'll see what I can do.
