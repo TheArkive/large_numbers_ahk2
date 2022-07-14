@@ -14,7 +14,7 @@ Features:
 * Mod() returns remainder
 * DivIM() returns integer and remainder
 * Decimals are no problem
-* Exponents (positive only for now)
+* Exponents
 * Comparisons (> < >= <= =)
 * Rounding (like AHK Round())
 * Dec to Hex conversion
