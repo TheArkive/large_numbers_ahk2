@@ -51,7 +51,7 @@ class math {
         str := "", t := this.DivIM(x,16)
         While t.i {
             str := SubStr(v,t.r+1,1) str
-            if this.Compare(t.i,16)
+            If this.Compare(t.i,16)
                 t := this.DivIM(t.i,16)
             Else Break
         }
@@ -68,7 +68,7 @@ class math {
         
         (InStr(x,"0x")=1) ? (x := SubStr(x,3)) : "" ; trim 0x from beginning
         
-        If StrLen(x) != Ceil(bit_width/4) ; length (bit_width) of number for hex
+        If bit_width && StrLen(x) != Ceil(bit_width/4) ; length (bit_width) of number for hex
             throw Error("Input bit width does not match specified bit width.",-1)
         
         arr := [], x := this._drop_lead(x)
@@ -113,7 +113,7 @@ class math {
     }
     
     BinToDec(x,bit_width:=0,signed:=false) {
-        If StrLen(x) != bit_width ; length (bit_width) of number for hex
+        If bit_width && StrLen(x) != bit_width ; length (bit_width) of number for hex
             throw Error("Input bit width does not match specified bit width.",-1)
         
         arr := [], x := this._drop_lead(x)
@@ -426,12 +426,8 @@ class math {
             remain := (xN?"-":"") rInt (rDec?"." rDec:"")
         }
         
-        dbg("quotient: " quotient)
-        
         result := (append?"-":"") this._drop_lead(quotient)
         (InStr(result,".")) ? (result := this._drop_trail(result)) : ""
-        
-        dbg("resut: " result)
         
         return (result="") ? "0" : result
     }
