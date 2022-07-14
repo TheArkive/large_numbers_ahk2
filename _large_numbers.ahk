@@ -35,21 +35,27 @@ class math {
     ; =================================================================
     
     DecToHex(x,bit_width:=0) {
+        If (!bit_width && (InStr(x,"-")=1))
+            throw Error("When using a negative number as input, bit_width must be specified.",-1,"math.DecToHex()")
+        
+        x := this._abs(x,&N) ; get abs() and record neg status
+        
         If (bit_width) && !(Len := 0) {
             Len := Ceil(bit_width/4) ; length (bit_width) of number for hex
-            x := (this.L(max_num := this.Exp(2,bit_width),x)) ? max_num : x ; truncate number based on bit_width (if specified)
+            max_num := this.Exp(2,bit_width)
+            x := (!N) ? ((this.L(max_num,x)) ? max_num : x) : this.Sub(max_num,x)
         }
         
         Static v := "0123456789ABCDEF"
         
         str := "", t := this.DivIM(x,16)
-        
         While t.i {
             str := SubStr(v,t.r+1,1) str
             if this.Compare(t.i,16)
                 t := this.DivIM(t.i,16)
             Else Break
         }
+        
         str := SubStr(v,t.i+1,1) str
         result := ((Mod(StrLen(str),2)) ? "0" : "") str
         (bit_width) ? (result := this._sr("0",Len-StrLen(result)) result) : ""
@@ -57,25 +63,41 @@ class math {
         return "0x" result
     }
     
-    HexToDec(x) {
+    HexToDec(x,bit_width:=0,signed:=false) {
         Static v := {0:0, 1:1, 2:2, 3:3, 4:4, 5:5, 6:6, 7:7, 8:8, 9:9, A:10, B:11, C:12, D:13, E:14, F:15}
         
         (InStr(x,"0x")=1) ? (x := SubStr(x,3)) : "" ; trim 0x from beginning
-        (InStr(x," ")) ? (x := StrReplace(x," ")) : ""
         
-        arr := []
+        If StrLen(x) != Ceil(bit_width/4) ; length (bit_width) of number for hex
+            throw Error("Input bit width does not match specified bit width.",-1)
+        
+        arr := [], x := this._drop_lead(x)
         Loop (L:=StrLen(x)) {
             fac := this.Exp(16,A_Index-1)
             c := SubStr(x,L-(A_Index-1),1)
             arr.Push(this.Mult(v.%c%,fac))
         }
         
-        return this.Add(arr*)
+        result := !(arr.Length = 1 && arr[1] = "0") ? this.Add(arr*) : "0"
+        
+        If signed && (result!="0") {
+            max_num := this.Exp(2,bit_width)
+            result := "-" this.Sub(max_num,result)
+        }
+        
+        return result
     }
     
     DecToBin(x,bit_width:=0) {
-        If (bit_width)
-            x := (this.L(max_num := this.Exp(2,bit_width),x)) ? max_num : x ; truncate number based on bit_width (if specified)
+        If (!bit_width && (InStr(x,"-")=1))
+            throw Error("When using a negative number as input, bit_width must be specified.",-1,"math.DecToHex()")
+        
+        x := this._abs(x,&N) ; get abs() and record neg status
+        
+        If (bit_width) {
+            max_num := this.Exp(2,bit_width)
+            x := (!N) ? ((this.L(max_num,x)) ? max_num : x) : this.Sub(max_num,x)
+        }
         
         str := "", t := this.DivIM(x,2)
         While (t.i) {
@@ -84,19 +106,31 @@ class math {
                 t := this.DivIM(t.i,2)
             Else Break
         }
+        
         str := t.i str
         (bit_width) ? (str := this._sr("0",bit_width-StrLen(str)) str) : ""
         return str
     }
     
-    BinToDec(x) {
+    BinToDec(x,bit_width:=0,signed:=false) {
+        If StrLen(x) != bit_width ; length (bit_width) of number for hex
+            throw Error("Input bit width does not match specified bit width.",-1)
+        
         arr := [], x := this._drop_lead(x)
         Loop (L:=StrLen(x)) {
             fac := this.Exp(2,A_Index-1)
             c := SubStr(x,L-(A_Index-1),1)
             arr.Push(this.Mult(c,fac))
         }
-        return this.Add(arr*)
+        
+        result := !(arr.Length = 1 && arr[1] = "0") ? this.Add(arr*) : "0"
+        
+        If signed && !(result="0") {
+            max_num := this.Exp(2,bit_width)
+            result := "-" this.Sub(max_num,result)
+        }
+        
+        return result
     }
     
     ; =================================================================
@@ -347,7 +381,7 @@ class math {
         
         If _remain && !this.Compare(x,y) {
             remain := x
-            return ; divisor (y) is greator than dividend (x), therefore entire dividend (x) is remainder
+            return "0" ; divisor (y) is greator than dividend (x), therefore entire dividend (x) is remainder
         }
         
         decLy := StrLen(this._get_dec(y))
@@ -392,10 +426,14 @@ class math {
             remain := (xN?"-":"") rInt (rDec?"." rDec:"")
         }
         
+        dbg("quotient: " quotient)
+        
         result := (append?"-":"") this._drop_lead(quotient)
         (InStr(result,".")) ? (result := this._drop_trail(result)) : ""
         
-        return result
+        dbg("resut: " result)
+        
+        return (result="") ? "0" : result
     }
     
     _invert(_i) => (InStr(_i,"-")=1) ? SubStr(_i,2) : ("-" _i)
