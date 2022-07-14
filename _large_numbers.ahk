@@ -23,25 +23,27 @@ class math {
     ; base conversion
     ; =================================================================
     
-    DecToHex(x,fmt:=false) {
+    DecToHex(x,bit_width:=0) {
+        If (bit_width) && !(Len := 0) {
+            Len := Ceil(bit_width/4) ; length (bit_width) of number for hex
+            x := ((max_num := this.Exp(2,bit_width)) < x) ? max_num : x ; truncate number based on bit_width (if specified)
+        }
+        
         Static v := "0123456789ABCDEF"
         
         str := "", t := this.DivIM(x,16)
         
         While t.i {
             str := SubStr(v,t.r+1,1) str
-            t := this.DivIM(t.i,16)
+            if this.Compare(t.i,16)
+                t := this.DivIM(t.i,16)
+            Else Break
         }
-        str := SubStr(v,t.r+1,1) str
+        str := SubStr(v,t.i+1,1) str
         result := ((Mod(StrLen(str),2)) ? "0" : "") str
+        (bit_width) ? (result := this._sr("0",Len-StrLen(result)) result) : ""
         
-        If fmt {
-            tmp := result, result := ""
-            Loop Parse tmp
-                result .= ((A_Index-1 && !Mod(A_Index-1,2)) ? " " : "") A_LoopField 
-        }
-        
-        return (fmt?"0x ":"0x") result
+        return "0x" result
     }
     
     HexToDec(x) {
@@ -77,7 +79,6 @@ class math {
             c := SubStr(x,L-(A_Index-1),1)
             arr.Push(this.Mult(c,fac))
         }
-        
         return this.Add(arr*)
     }
     
@@ -97,7 +98,7 @@ class math {
     Combine(x,y) { ; performs addition/subtraction, properly combining positive/negative numbers
         xI := this._get_int(x), yI := this._get_int(y) ; get integers
         xD := this._get_dec(x), yD := this._get_dec(y) ; get decimals
-        this._make_trail(&xD,&yD)         ; make fractional/decimal length equal (trailing zeros)
+        this._make_trail(&xD,&yD) ; make fractional/decimal length equal (trailing zeros)
         
         x := xI ((xD!="")?"." xD:""), y := yI ((yD!="")?"." yD:"") ; use "cleaned" inputs
         
