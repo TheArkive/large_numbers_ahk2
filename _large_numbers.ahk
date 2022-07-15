@@ -594,8 +594,3 @@ class math {
     }
 }
 
-
-dbg(_in) { ; AHK v2
-    Loop Parse _in, "`n", "`r"
-        OutputDebug "AHK: " A_LoopField
-}

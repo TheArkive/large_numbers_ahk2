@@ -147,3 +147,10 @@ b := 113
 _calc := calc(a,"/",b), _t := A_TickCount
 ahk := m.Div(a,b)
 Msgbox disp("Example 9`nCompute π (approx) to 100 decimal places`n`n",_calc,ahk)
+
+
+
+; dbg(_in) { ; AHK v2
+    ; Loop Parse _in, "`n", "`r"
+        ; OutputDebug "AHK: " A_LoopField
+; }
