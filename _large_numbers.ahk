@@ -27,19 +27,19 @@
 ; Properties
 ; - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 ;
-;   x86_Dadd    = Max number of digits to use for doing chuncks of adding and
+;   x86_Dadd    = Max number of digits to use for doing chunks of adding and
 ;   x64_Dadd      subtracting for x86 and x64 architecture.  These generally
 ;                 should not change.
 ;
-;   x86_Dmult   = Max number of digits to use for doing chuncks of multiplication
+;   x86_Dmult   = Max number of digits to use for doing chunks of multiplication
 ;   x64_Dmult     for x86 and x64 architecture.  These generally should not change.
 ;
 ;   dMult       = On object creation, system architecture is determined and
-;   dAdd          these properties are the resulting number of digitus to
-;                 use when doing chuncks of multiplication and addition.
+;   dAdd          these properties are the resulting number of digits to
+;                 use when doing chunks of multiplication and addition.
 ;                 These values should generally not change.  If they are
 ;                 changed, then only making these numbers smaller is suggested,
-;                 otherwise the chuncks of addition and multiplication will
+;                 otherwise the chunks of addition and multiplication will
 ;                 be inaccurate once the resulting "chunks" result in a value
 ;                 that exceeds the max value of INT64.  Naturally, if these
 ;                 values are made smaller, then larger computations will take
@@ -87,19 +87,19 @@
 ;
 ;   Add(p*)
 ;
-;       Input is an array of numbers.  Minimum 2 paramaters,
+;       Input is variadic and a minimum of 2 numbers.  Minimum 2 paramaters,
 ;       otherwise an error is thrown.  The result is returned.
 ;
 ;   Combine(x,y)
 ;
-;       Input is any 2 numbers.  The result is returned.  This is technically
-;       an internal method, and is used by Add() and Sub().
+;       Input is variadic and a minimum of 2 numbers.  The result is returned.
+;       This is technically an internal method, and is used by Add() and Sub().
 ;
 ;   Sub(p*)
 ;
-;       Input is an array of numbers.  For subtraction, all input items in
-;       the array, starting from the second item, are inverted.  Then
-;       subtraction is performed, and the result is returned.
+;       Input is variadic and a minimum of 2 numbers.  For subtraction, all
+;       input items in the array, starting from the second item, are inverted.
+;       Then subtraction is performed, and the result is returned.
 ;
 ; - - - - - - - - - - - - - - - - - - -
 ; Division / Multiplication / Exponents
@@ -107,7 +107,7 @@
 ;
 ;   Div(p*)
 ;
-;       Input is an array of decimal numbers.  All numbers are divided in
+;       Input is variadic and a minimum of 2 numbers.  All numbers are divided in
 ;       sequence, and the result is returned.  Decimal length is limited
 ;       by the dec property, which is set on object creation.  The returned
 ;       result is not rounded.
@@ -132,9 +132,9 @@
 ;
 ;           x = Dividend    /    y = Divisor
 ;
-;   Multi(p*)
+;   Mult(p*)
 ;
-;       Input is an array of numbers.  The result is returned.
+;       Input is variadic and a minimum of 2 numbers.  The result is returned.
 ;
 ; - - - - - - - - - - - - - - - - - - -
 ; Comparisons
