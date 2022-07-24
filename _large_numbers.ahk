@@ -213,6 +213,41 @@ class math {
     }
     
     ; =================================================================
+    ; other
+    ; =================================================================
+    
+    Round(x,L) {
+        x := this._abs(x,&xN)   ; abs of x and negative check (xN)
+        d := InStr(x,".")       ; pos of decimal
+        
+        If ( (dLen := (!d) ? 0 : (StrLen(x) - d)) = L )
+            return (xN?"-":"") x ; return if [ decLen = L ]
+        
+        final := (xN?"-":"") ( (L>=0) ? SubStr(x,1,d+(!L?-1:L)) ; extract final number if rounding down
+                             : SubStr(x,1,d+L-1) this._sr("0",this._abs(L)) )
+        d_c := (L>=0) ? (d+L+1) : Abs(L)                        ; digit check offset
+        dg  := (L>=0) ? SubStr(x,d_c,1) : SubStr(x,d+L,1)       ; digit to check
+        
+        If (dg >= 5)    ; perform rounding, determine what to add ...
+            addon := (L<=0) ? ("1" this._sr("0",Abs(L))) : ("0." this._sr("0",L-1) "1")
+        Else addon := 0 ; ... or add nothing
+        
+        return (!addon) ? final : this.Add(final,addon*(xN?-1:1))
+    }
+    
+    Type(x) {
+        dec := "\-?\d+(\.\d+)?"
+        hex := "0x[\da-f]+"
+        
+        If RegExMatch(x,  "^" dec "$")
+            return "dec"
+        Else If RegExMatch(x,"i)^" hex "$")
+            return "hex"
+        Else
+            return "unk"
+    }
+    
+    ; =================================================================
     ; base conversion
     ; =================================================================
     
@@ -408,34 +443,35 @@ class math {
     ; comparison
     ; =================================================================
     
-    Compare(x,y) { ; [ x > y returns 1 ] // [ x < y returns 0 ] // [ x = y returns -1 ] // [ returns -2 (unexpected result) ]
+    Compare(x,y) { ; [ x > y returns 1 ] // [ x < y returns 0 ] // [ x = y returns -1 ]
         If (x !== y) {
-            
-            xN := (InStr(x,"-")=1), yN := (InStr(y,"-")=1)  ; determine which values are negative
-            dN := (xN && yN)                                ; check for "double negative"
-            
+            x := this._drop_trail(x), y := this._drop_trail(y) ; drop null decimals
+            xN := (InStr(x,"-")=1), yN := (InStr(y,"-")=1), dN := (xN && yN)
             If (result := (!xN && yN) ? true : (xN && !yN) ? false : "") != ""   ; check if only one param is negative
                 return result
             
-            xI := this._get_int(x), yI := this._get_int(y)  ; separate integers
-            
-            If (result := this._comp(xI,yI)) != ""          ; Compare integers ...
+            If (result := _comp(this._get_int(x),this._get_int(y))) != ""          ; Compare integers ...
                 return dN ? !result : result                ; ... and retun result if not equal.
             
             xD := this._get_dec(x), yD := this._get_dec(y)  ; get decimals, drop trailing 0's
-            
-            If (result := (xD && !yD) ? true : (!xD && yD) ? false : "") != "" ; check if only one param has a decimal
+            If (result := (xD && !yD) ? true : (!xD && yD) ? false : (xD == yD) ? -1 : "") != "" ; check if only one param has a decimal
                 return result
-            Else If (xD == yD)
-                return -1 ; inputs are equal
             
             this._make_trail(&xD,&yD)               ; "cleanup"/align decimals
-            If (result := this._comp(xD,yD)) != ""  ; compare decimals
-                return dN ? !result : result 
-            Else
-                return -2 ; inputs still equal? - unexpected result
-            
+            If (result := _comp(xD,yD)) != ""  ; compare decimals
+                return dN ? !result : result
         } return -1 ; inputs are equal
+        
+        _comp(x_,y_) {  ; basic positive number comparison
+            If (result := ( (xL:=StrLen(x_)) > (yL:=StrLen(y_)) ) ? true : (xL < yL) ? false : "" ) != ""
+                return result
+            Loop StrLen(x_) {
+                If (_x := SubStr(x_,A_Index,1)) = (_y := SubStr(y_,A_Index,1))
+                    Continue
+                If (result := (_x > _y) ? true : (_x < _y) ? false : "") != ""
+                    Break
+            } return result
+        }
     }
     
     Eq(x,y) => (this.Compare(x,y)=-1) ? true : false
@@ -448,29 +484,6 @@ class math {
     
     Le(x,y) => ((r:=this.Compare(x,y))=0 || r=-1) ? true : false ; less than or equal to
     
-    ; =================================================================
-    ; other
-    ; =================================================================
-    
-    Round(x,L) {
-        x := this._abs(x,&xN)   ; abs of x and negative check (xN)
-        d := InStr(x,".")       ; pos of decimal
-        
-        If ( (dLen := (!d) ? 0 : (StrLen(x) - d)) = L )
-            return (xN?"-":"") x ; return if [ decLen = L ]
-        
-        final := (xN?"-":"") ( (L>=0) ? SubStr(x,1,d+(!L?-1:L)) ; extract final number if rounding down
-                             : SubStr(x,1,d+L-1) this._sr("0",this._abs(L)) )
-        d_c := (L>=0) ? (d+L+1) : Abs(L)                        ; digit check offset
-        dg  := (L>=0) ? SubStr(x,d_c,1) : SubStr(x,d+L,1)       ; digit to check
-        
-        If (dg >= 5)    ; perform rounding, determine what to add ...
-            addon := (L<=0) ? ("1" this._sr("0",Abs(L))) : ("0." this._sr("0",L-1) "1")
-        Else addon := 0 ; ... or add nothing
-        
-        return (!addon) ? final : this.Add(final,addon*(xN?-1:1))
-    }
-    
     ; =========================================================================================================
     ; ==== internal methods ===================================================================================
     ; =========================================================================================================
@@ -478,16 +491,13 @@ class math {
     _abs(_i,&_neg:=0) => (_neg:=InStr(_i,"-")=1) ? SubStr(_i,2) : _i
     
     _add(x,y) {
-        x := this._abs(x,&xN), y := this._abs(y,&yN)    ; get absolute value and neg status
+        x := this._abs(x,&xN), y := this._abs(y,&yN), append := ((xN && yN) ? true : false) ; get absolute value and neg status
         decLen := (!(d:=Instr(x,".")) ? 0 : StrLen(SubStr(x,d+1))) ; get decimal length
-        
         x := StrReplace(x,"."), y := StrReplace(y,".")  ; strip decimal for simplicity
         
-        append := (xN && yN) ? true : false
-        
-        _r := [], _dec := "", _d := this.dAdd
-        
+        _r := [], _dec := "", _res := "", _addon := 0, _d := this.dAdd
         x_a := SubStr(x,_d * -1), y_a := SubStr(y,_d * -1)
+        
         While (StrLen(x_a) || StrLen(y_a)) {
             If (x="") && (y="")
                 Break
@@ -495,60 +505,33 @@ class math {
             _r.Push(x_a + y_a) ; push values to array
             x := SubStr(x,1,_d * -1), y := SubStr(y,1,_d * -1) ; new x/y values
             
-            x_a := (r:=SubStr(x,_d * -1)) ? r : 0
-            y_a := (r:=SubStr(y,_d * -1)) ? r : 0
+            (x_a := (r:=SubStr(x,_d * -1)) ? r : 0), (y_a := (r:=SubStr(y,_d * -1)) ? r : 0)
         }
         
-        _res := "", _addon := 0
         For i, val in _r {
-            val += _addon
-            If (StrLen(val) > _d) {
-                _addon := SubStr(val,1,_d * -1)
-                val := SubStr(val,_d * -1)
-            } Else _addon := 0
+            If (StrLen(val += _addon) > _d)
+                _addon := SubStr(val,1,_d * -1), val := SubStr(val,_d * -1)
+            Else _addon := 0
             _res := Format("{:0" _d "}",String(val)) _res
         }
         
-        _res := this._drop_lead(_res)
-        (_addon) ? (_res := _addon _res) : ""
+        result := (_addon?_addon:"") this._drop_lead(_res)
         
-        If decLen {
-            _int := SubStr(_res,1,decLen * -1)
-            _dec := this._drop_trail(SubStr(_res,decLen * -1),false)
-        } Else _int := (_res!="")?_res:"0"
+        decLen ? (result := this._drop_trail(SubStr(result,1,decLen * -1) "." SubStr(result,decLen * -1))) : ""
         
-        return (append?"-":"") _int (_dec?"." _dec:"")
-    }
-    
-    _comp(x,y) {  ; basic positive number comparison
-        If (result := ( (xL:=StrLen(x)) > (yL:=StrLen(y)) ) ? true : (xL < yL) ? false : "" ) != ""
-            return result
-        
-        Loop StrLen(x) {
-            If (_x := SubStr(x,A_Index,1)) = (_y := SubStr(y,A_Index,1))
-                Continue
-            If (result := (_x > _y) ? true : (_x < _y) ? false : "") != ""
-                Break
-        }
-        return result
+        return (append?"-":"") result
     }
     
     _dec_move(&x,&y) { ; make y an integer, Mult x/y by power of 10, prep for _div()
         If (yD := this._get_dec(y)) {                       ; check for y decimal
-            xI := this._get_int(x), yI := this._get_int(y)  ; get integers
-            xD := this._get_dec(x)                          ; get x decimal
-            
-            yDL := StrLen(yD)
-            xIA := SubStr(xD,1,yDL)             ; x Integer Append
+            xI := this._get_int(x), yI := this._get_int(y), xD := this._get_dec(x) ; get integers and decimals
+            yDL := StrLen(yD), xIA := SubStr(xD,1,yDL) ; x Integer Append
             
             If ( (xIAL := StrLen(xIA)) < yDL )  ; x Integer Append Length
                 xIA .= this._sr("0",yDL-xIAL)   ; append 0's if needed
-            x  := xI xIA                        ; recreate x integer
-            xD := SubStr(xD,yDL+1)              ; recreate x decimal
-            x  := (xD?x "." xD:x)               ; append x decimal if exist
-            y  := yI yD                         ; recreate y as integer
-        } Else
-            y := this._get_int(y) ; no decmal, or decimal is only 0's
+            x  := xI xIA, xD := SubStr(xD,yDL+1), x  := (xD?x "." xD:x) ; recreate x
+            y  := yI yD  ; recreate y
+        } Else y := this._get_int(y) ; no decmal, or decimal is only 0's
     }
     
     _div(x,y,&remain:=0) { ; x = dividend, y = divisor, remain = remainder
@@ -557,8 +540,7 @@ class math {
         
         _remain := !IsSet(remain)
         
-        xN := (InStr(x,"-")=1), yN := (InStr(y,"-")=1)
-        x := StrReplace(x,"-"), y := StrReplace(y,"-") ; remove negative sign
+        x := this._abs(x,&xN), y := this._abs(y,&yN)    ; get absolute value and neg status
         append := ((xN && !yN) || (!xN && yN)) ? true : false ; append negative sign
         
         If _remain && !this.Compare(x,y) {
@@ -567,36 +549,23 @@ class math {
         }
         
         decLy := StrLen(this._get_dec(y))
-        this._dec_move(&x,&y)           ; make y an integer, Mult x/y by power of 10
-        
-        _d := InStr(x,".")              ; save x decimal pos
-        x := StrReplace(x,".")          ; remove decimal in x
-        xL := StrLen(x)                 ; Save max length of dividend integer
+        this._dec_move(&x,&y) ; make y an integer, Mult x/y by power of 10
+        _d := InStr(x,"."), x := StrReplace(x,"."), xL := StrLen(x) ; Save max length of dividend integer
         
         intL := (!_d) ? xL : (_d-1)     ; set integer length for quotient
-        
-        st  := 0        ; start place to "take" digits from dividend
-        d_p := ""       ; dividend partial with remainder (for long division)
-        quotient := ""  ; final answer init
-        
-        int := 0, remain := 0 ; init values
+        st  := 0, d_p := "", quotient := "", int := 0, remain := 0 ; start place, dividend partial, final answer init
         
         Loop {
-            dc:=(st-intL)
-            
-            If (dc=this.dec) || (!dc && _remain) { ; quit on specified decimal length, or just to get remainder
-                this._mod(this._drop_lead(d_p),y,&int,&remain) ; compare dividend part to divisor
+            If ((dc:=(st-intL))=this.dec) || (!dc && _remain) { ; quit on specified decimal length, or just to get remainder
+                this._mod(_d_p,y,&int,&remain) ; compare dividend part to divisor
                 Break
             }
             
             (!dc) ? (quotient .= ".") : "" ; append decimal after passing whole integer
             
             d_p .= (_r :=SubStr(x,++st,1)) ? _r : "0" ; pull down next integer in long division
-            
-            this._mod(this._drop_lead(d_p),y,&int,&remain) ; compare dividend part to divisor
-            
-            quotient .= int
-            d_p := remain ; add int to quotient, reset remainder
+            this._mod(_d_p,y,&int,&remain) ; compare dividend part to divisor
+            quotient .= int, d_p := remain, _d_p := this._drop_lead(d_p) ; add int to quotient, reset remainder
             
             If (d_p="") && (st >= xL) ; !Integer(d_p) ..... end of division?
                 Break
@@ -679,7 +648,7 @@ class math {
         
         If decLen {
             _int := SubStr(_res,1,decLen * -1)
-            _dec := this._drop_trail(SubStr(_res,decLen * -1),false)
+            _dec := this._drop_trail(SubStr(_res,decLen * -1))
         } Else _int := _res
         
         _result := (append?"-":"") _int (_dec?"." _dec:"")
@@ -723,7 +692,7 @@ class math {
         
         If decLen {
             _int := SubStr(_res,1,decLen * -1)
-            _dec := this._drop_trail(SubStr(_res,decLen * -1),false)
+            _dec := this._drop_trail(SubStr(_res,decLen * -1))
         } Else _int := (_res!="") ? _res : "0"
         
         return (append?"-":"") _int (_dec?"." _dec:"")
@@ -733,41 +702,23 @@ class math {
     ; === utility methods ======================================================================
     ; ==========================================================================================
     
-    _drop_trail(z,i:=0) { ; drop trailing zeros (for fractional values only)
-        While (SubStr(z,-1 - i,1) = "0") && (i <= StrLen(z))
-            i++
-        result := SubStr(z,1,(L:=StrLen(z)) - ((i>L)?--i:i))
-        return (SubStr(result,-1)=".") ? SubStr(result,1,-1) : result
-    }
-    
-    _drop_lead(z,i:=1) { ; drop leading zeros (for integers only)
-        While SubStr(z,i,1) = "0"
-            i++
-        _r := SubStr(z,i)
-        return (_r="") ? "0" : (InStr(_r,".")=1) ? "0" _r : _r
-    }
+    _drop_trail(z) => (Instr(z,".")) ? RTrim(z,"0.") : z
+
+    _drop_lead(z) => (InStr(_z:=LTrim(z,"0"),".")=1) ? "0" _z : (_z!="") ? _z : "0"
     
     _get_int(_i) => ; get integer from input
-        ( SubStr( _i,1,(!(d:=InStr(_i,".")) ? StrLen(_i) : (d-1)) ) )
+        (__d:=InStr(_i,".")) ? SubStr(_i,1,__d-1) : _i
     
     _get_dec(_i) => ; get decimal from input (return is zero-length str if dec is all 0's)
-        this._drop_trail( SubStr( _i
-                                , ( (d:=InStr(_i,".")+(L:=StrLen(_i))-L) ? (d+1) : L+1 )
-                                , (!d?L+1:L-d) )
-                        )
+        (__d:=InStr(_i,".")) ? RTrim(SubStr(_i,__d+1),"0") : ""
     
     _make_trail(&x,&y) { ; make x/y inputs the same length, add trailing zeros (for fractional values only)
-        If (x="" && y="") ; don't waste time/cpu on empty strings
-            return ""
-        xL := StrLen(x), yL := StrLen(y)
-        (xL>yL) ? (yL:=StrLen(y:=y . this._sr("0",xL-yL)))  : (yL>xL) ? (xL:=StrLen(x:=x . this._sr("0",yL-xL))) : ""
+        (((StrLen(x)) > (StrLen(y))) ? (L:="x",O:="y") : (L:="y", O:="x")), oL:=StrLen(%O%), LL := StrLen(%L%) ; Longest and Other
+        %O% .= Format("{:0" (LL-oL) "}","")
     }
     
-    _sr(a,b,result:="") { ; string repeat ... a=str, b=iterations
-        Loop b
-            result .= a
-        return result
-    }
+    _sr(a,b) => ; string repeat ... a=str, b=iterations
+        StrReplace(Format("{:-" b "}","")," ",a)
     
     _swap(&x,&y) {
         z := x, x := y, y := z

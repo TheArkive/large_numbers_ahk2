@@ -74,6 +74,14 @@ m := math(30) ; 30 decimal places, set m.dec after object creation
 
 
 
+; a := "1.1"
+; b := "1.23"
+; _calc := calc(a,"+",b), _t := A_TickCount
+; ahk := m.Add(a,b)
+; msgbox disp("Example 0`nSimple Addition",_calc,ahk)
+
+
+
 a := "70141183460469231731687303715"                ; example 1 (large addition)
 b := "51730378613713296406438114107"
 _calc := calc(a,"+",b), _t := A_TickCount
