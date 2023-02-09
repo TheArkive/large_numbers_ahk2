@@ -557,15 +557,17 @@ class math {
         
         Loop {
             If ((dc:=(st-intL))=this.dec) || (!dc && _remain) { ; quit on specified decimal length, or just to get remainder
-                this._mod(_d_p,y,&int,&remain) ; compare dividend part to divisor
+                this._mod(d_p,y,&int,&remain) ; compare dividend part to divisor
                 Break
             }
             
             (!dc) ? (quotient .= ".") : "" ; append decimal after passing whole integer
             
             d_p .= (_r :=SubStr(x,++st,1)) ? _r : "0" ; pull down next integer in long division
-            this._mod(_d_p,y,&int,&remain) ; compare dividend part to divisor
-            quotient .= int, d_p := remain, _d_p := this._drop_lead(d_p) ; add int to quotient, reset remainder
+            
+            this._mod(d_p,y,&int,&remain) ; compare dividend part to divisor
+            
+            quotient .= int, d_p := this._drop_lead(d_p := remain) ; add int to quotient, reset remainder
             
             If (d_p="") && (st >= xL) ; !Integer(d_p) ..... end of division?
                 Break
@@ -720,8 +722,10 @@ class math {
     _sr(a,b) => ; string repeat ... a=str, b=iterations
         StrReplace(Format("{:-" b "}","")," ",a)
     
-    _swap(&x,&y) {
+    _swap(&x,&y) ; test
+    {
         z := x, x := y, y := z
     }
+    
 }
 
